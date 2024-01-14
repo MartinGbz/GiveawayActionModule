@@ -26,6 +26,8 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
     
     constructor(address lensHubProxyContract, address moduleOwner) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) {
         lensHub = LensHub(lensHubProxyContract);
+
+        console.log(address(this));
     }
 
     function supportsInterface(bytes4 interfaceID) public pure override returns (bool) {
