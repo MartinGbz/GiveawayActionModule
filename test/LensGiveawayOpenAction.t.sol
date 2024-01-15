@@ -57,8 +57,7 @@ contract LensGiveawayOpenActionTest is Test {
         lensGiveawayOpenAction.initializePublicationAction(authorProfileId, pubId, publicationAuthor,  abi.encode(usdceAddress, 1));
 
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).rewardAmount, 1);
-        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).rewardCurrency, usdceAddress
-        );
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).rewardCurrency, usdceAddress);
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).usersRegistered, new address[](0));
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).giveawayClosed, false);
 

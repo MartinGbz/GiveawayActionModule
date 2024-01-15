@@ -5,3 +5,4 @@ layerzero/=lib/layerzero/contracts/
 lens/=lib/lens/
 lens-giveaway/=lib/lens-giveaway/
 @openzeppelin/=lib/openzeppelin-contracts/
+@chainlink/=lib/chainlink/contracts/src/v0.8

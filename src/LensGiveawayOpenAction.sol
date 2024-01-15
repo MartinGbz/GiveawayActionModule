@@ -17,15 +17,26 @@ abstract contract LensHub {
     function isFollowing(uint256 followerProfileId, uint256 followedProfileId) public virtual view returns (bool);
 }
 
+abstract contract ChainlinkVRF {
+    uint256 public lastRequestId;
+    function requestRandomWords() external virtual returns (uint256 requestId);
+    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal virtual;
+    function getRequestStatus(uint256 _requestId) external virtual view returns (bool fulfilled, uint256[] memory randomWords);
+    function acceptOwnership() external virtual;
+}
+
 contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, LensModuleMetadata {
     mapping(uint256 publicationId => GiveawayTypes.GiveawayInfos) internal _giveawayInfos;
 
     LensHub internal lensHub;
 
+    ChainlinkVRF internal chainlinkVRF;
+
     using SafeERC20 for IERC20;
     
     constructor(address lensHubProxyContract, address moduleOwner) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) {
         lensHub = LensHub(lensHubProxyContract);
+        chainlinkVRF = ChainlinkVRF(0x803824A1528f9c1741374e056ff23E0f34299ec2);
 
         console.log(address(this));
     }
@@ -73,6 +84,15 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
             
             _giveawayInfos[params.publicationActedId].usersRegistered.push(params.transactionExecutor);
         } else {
+            chainlinkVRF.acceptOwnership();
+            uint256 requestId = chainlinkVRF.requestRandomWords();
+            console.log("requestId", requestId);
+            (bool fulfilled, uint256[] memory randomWords) = chainlinkVRF.getRequestStatus(requestId);
+
+            if(!fulfilled || randomWords.length == 0) {
+                revert("Random words could not be fetched");
+            }
+
             uint256 randomNumber = 286532976532;
             winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber % _giveawayInfos[params.publicationActedId].usersRegistered.length];
 
