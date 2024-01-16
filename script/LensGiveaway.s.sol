@@ -9,7 +9,7 @@ contract LensGiveawayScript is Script {
 
     function run() external {
         vm.startBroadcast();
-        new LensGiveawayOpenAction(0x4fbffF20302F3326B20052ab9C217C44F6480900, 0xFa3ED20a82df27DF4b1a01dfb7EFC9b1b0848241, 6940);
+        new LensGiveawayOpenAction(0x4fbffF20302F3326B20052ab9C217C44F6480900, 0xFa3ED20a82df27DF4b1a01dfb7EFC9b1b0848241, 6940, 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed);
         vm.stopBroadcast();
     }
 }

@@ -11,11 +11,11 @@ import {Types as GiveawayTypes} from '@lens-giveaway/Types.sol';
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "@chainlink/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/shared/access/ConfirmedOwner.sol";
 
-// import "forge-std/console.sol";
+import "forge-std/console.sol";
 
 abstract contract LensHub {
     function ownerOf(uint256 profileId) public virtual view returns (address);
@@ -51,11 +51,12 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
     uint public randomWord;
     /* ---------------------------------- */
     
-    constructor(address lensHubProxyContract, address moduleOwner, uint64 subscriptionId) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) VRFConsumerBaseV2(0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed) {
+    // vrfCoordinator mumbai: 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
+    constructor(address lensHubProxyContract, address moduleOwner, uint64 subscriptionId, address vrfCoordinator) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) VRFConsumerBaseV2(vrfCoordinator) {
         lensHub = LensHub(lensHubProxyContract);
 
         COORDINATOR = VRFCoordinatorV2Interface(
-            0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
+            vrfCoordinator
         );
         s_subscriptionId = subscriptionId;
 
@@ -93,7 +94,7 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         if(lensHub.ownerOf(senderProfileId) != params.transactionExecutor) {
             revert("The transactionExecutor doesn't own the profileId of the sender ");
         }
-        
+        uint256 requestId;
         address publicationOwner = lensHub.ownerOf(params.publicationActedProfileId);
         if(params.transactionExecutor != publicationOwner) {
             if(!lensHub.isFollowing(
@@ -103,11 +104,11 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
             
             _giveawayInfos[params.publicationActedId].usersRegistered.push(params.transactionExecutor);
         } else {
-            uint256 requestId = requestRandomWords();
+            requestId = requestRandomWords();
             _publicationsParams[requestId] = params;
         }
         
-        return abi.encode(_giveawayInfos[params.publicationActedId].usersRegistered.length);
+        return abi.encode(requestId);
     }
 
     /* ---------- ChainlinkVRF ---------- */
@@ -115,6 +116,7 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         private
         returns (uint256 requestId)
     {
+        console.log("requestRandomWords");
         // Will revert if subscription is not set and funded.
         requestId = COORDINATOR.requestRandomWords(
             keyHash,
@@ -123,6 +125,7 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
             callbackGasLimit,
             numWords
         );
+        console.log("requestId", requestId);
         s_requests[requestId] = RequestStatus({
             randomWords: new uint256[](0),
             exists: true,
@@ -147,18 +150,33 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         uint256 randomNumber = randomWord % _giveawayInfos[params.publicationActedId].usersRegistered.length;
         address winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber];
 
-        // console.log("_requestId", _requestId);
-        // console.log("winner", winner);
-        // console.log("randomNumber", randomNumber);
-        // console.log("randomWord", randomWord);
-        // console.log("usersRegistered", _giveawayInfos[params.publicationActedId].usersRegistered.length);
+        console.log("_requestId", _requestId);
+        console.log("winner", winner);
+        console.log("randomNumber", randomNumber);
+        console.log("randomWord", randomWord);
+        console.log("usersRegistered", _giveawayInfos[params.publicationActedId].usersRegistered.length);
 
         IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
+        
+        console.log("1");
+        console.log("rewardCurrency", _giveawayInfos[params.publicationActedId].rewardCurrency);
+        console.log("rewardAmount", _giveawayInfos[params.publicationActedId].rewardAmount);
+        console.log("this", address(this));
+        console.log("gang");
+        console.log("token", address(token));
+
+        console.log("balance", token.balanceOf(winner));
+        console.log("allowance", token.allowance(params.actorProfileOwner, address(this)));
+        
         token.safeTransferFrom(
             params.actorProfileOwner,
             winner,
             _giveawayInfos[params.publicationActedId].rewardAmount
         );
+
+        console.log("2");
+
+        console.log("token.balanceOf(winner)", token.balanceOf(winner));
 
         _giveawayInfos[params.publicationActedId].giveawayClosed = true;
 
