@@ -37,7 +37,7 @@ contract LensGiveawayOpenActionTest is Test {
     uint256 authorProfileId = 1093;
 
     function setUp() public {
-        lensGiveawayOpenAction = new LensGiveawayOpenAction(lensHubProxy, participant);
+        lensGiveawayOpenAction = new LensGiveawayOpenAction(lensHubProxy, participant, 6940);
         usdce = USDCe(usdceAddress);
     }
 
@@ -52,7 +52,26 @@ contract LensGiveawayOpenActionTest is Test {
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).giveawayClosed, false);
     }
 
-    function testProcess() public {
+    function testInitAndEnterGiveaway() public {
+        vm.startPrank(lensHubProxy); // OnlyHub
+        lensGiveawayOpenAction.initializePublicationAction(authorProfileId, pubId, publicationAuthor,  abi.encode(usdceAddress, 1));
+
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).rewardAmount, 1);
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).rewardCurrency, usdceAddress);
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).usersRegistered, new address[](0));
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).giveawayClosed, false);
+
+        Types.ProcessActionParams memory params = Types.ProcessActionParams(authorProfileId, pubId, authorProfileId, publicationAuthor, participant, new uint256[](0), new uint256[](0), new Types.PublicationType[](0), abi.encode(participantProfileId));
+        lensGiveawayOpenAction.processPublicationAction(params);
+
+        assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).usersRegistered.length, 1);
+
+        assertEq(usdce.balanceOf(participant), 0);
+    }
+
+    // event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+
+    function testFullFlow() public {
         vm.startPrank(lensHubProxy); // OnlyHub
         lensGiveawayOpenAction.initializePublicationAction(authorProfileId, pubId, publicationAuthor,  abi.encode(usdceAddress, 1));
 
@@ -76,7 +95,9 @@ contract LensGiveawayOpenActionTest is Test {
         vm.startPrank(lensHubProxy);
         // --------------------
 
-        // publicationAuthor has USDC.e on Polygon on 14/01/2024
+        // vm.expectEmit(false, false, false, false);
+        // emit RequestFulfilled(0, [281620ef8bbcea99eddfc8cbb8c420c910c777d19254fad356ead0ec3b3560e1]);
+
         Types.ProcessActionParams memory paramsDraw = Types.ProcessActionParams(authorProfileId, pubId, authorProfileId, publicationAuthor, publicationAuthor, new uint256[](0), new uint256[](0), new Types.PublicationType[](0), abi.encode(authorProfileId));
         lensGiveawayOpenAction.processPublicationAction(paramsDraw);
 

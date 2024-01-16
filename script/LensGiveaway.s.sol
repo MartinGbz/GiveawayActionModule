@@ -8,14 +8,14 @@ contract LensGiveawayScript is Script {
     function setUp() public {}
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address moduleOwner = vm.envAddress("MODULE_OWNER");
-        vm.startBroadcast(deployerPrivateKey);
+        // uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        // address moduleOwner = vm.envAddress("MODULE_OWNER");
+        // vm.startBroadcast(deployerPrivateKey);
 
-        address lensHubProxyAddress = vm.envAddress("LENS_HUB_PROXY");
+        // address lensHubProxyAddress = vm.envAddress("LENS_HUB_PROXY");
 
-        new LensGiveawayOpenAction(lensHubProxyAddress, address(moduleOwner));
-
+        vm.startBroadcast();
+        new LensGiveawayOpenAction(0x4fbffF20302F3326B20052ab9C217C44F6480900, 0xFa3ED20a82df27DF4b1a01dfb7EFC9b1b0848241, 6940);
         vm.stopBroadcast();
     }
 }

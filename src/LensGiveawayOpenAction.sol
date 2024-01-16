@@ -10,35 +10,66 @@ import {LensModuleMetadata} from 'lens/LensModuleMetadata.sol';
 import {Types as GiveawayTypes} from 'lens-giveaway/Types.sol';
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "forge-std/console.sol";
+
+import "@chainlink/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/vrf/VRFConsumerBaseV2.sol";
+import "@chainlink/shared/access/ConfirmedOwner.sol";
+
+// import "forge-std/console.sol";
 
 abstract contract LensHub {
     function ownerOf(uint256 profileId) public virtual view returns (address);
     function isFollowing(uint256 followerProfileId, uint256 followedProfileId) public virtual view returns (bool);
 }
 
-abstract contract ChainlinkVRF {
-    uint256 public lastRequestId;
-    function requestRandomWords() external virtual returns (uint256 requestId);
-    function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal virtual;
-    function getRequestStatus(uint256 _requestId) external virtual view returns (bool fulfilled, uint256[] memory randomWords);
-    function acceptOwnership() external virtual;
-}
+// abstract contract ChainlinkVRF {
+//     uint256 public lastRequestId;
+//     function requestRandomWords() external virtual returns (uint256 requestId);
+//     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal virtual;
+//     function getRequestStatus(uint256 _requestId) external virtual view returns (bool fulfilled, uint256[] memory randomWords);
+//     function acceptOwnership() external virtual;
+// }
 
-contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, LensModuleMetadata {
+contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, LensModuleMetadata, VRFConsumerBaseV2 {
     mapping(uint256 publicationId => GiveawayTypes.GiveawayInfos) internal _giveawayInfos;
+    mapping(uint256 requestId => Types.ProcessActionParams) internal _publicationsParams;
 
     LensHub internal lensHub;
 
-    ChainlinkVRF internal chainlinkVRF;
-
     using SafeERC20 for IERC20;
-    
-    constructor(address lensHubProxyContract, address moduleOwner) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) {
-        lensHub = LensHub(lensHubProxyContract);
-        chainlinkVRF = ChainlinkVRF(0x803824A1528f9c1741374e056ff23E0f34299ec2);
 
-        console.log(address(this));
+    /* ---------- ChainlinkVRF ---------- */
+    // ChainlinkVRF internal chainlinkVRF;
+    event RequestSent(uint256 requestId, uint32 numWords);
+    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+    struct RequestStatus {
+        bool fulfilled;
+        bool exists;
+        uint256[] randomWords;
+    }
+    mapping(uint256 => RequestStatus)
+        public s_requests;
+    VRFCoordinatorV2Interface COORDINATOR;
+    uint64 s_subscriptionId;
+    uint256[] public requestIds;
+    uint256 public lastRequestId;
+    bytes32 keyHash = 0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f;
+    uint32 callbackGasLimit = 100000;
+    uint16 requestConfirmations = 3;
+    uint32 numWords = 2;
+    uint public randomWord;
+    /* ---------------------------------- */
+    
+    constructor(address lensHubProxyContract, address moduleOwner, uint64 subscriptionId) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) VRFConsumerBaseV2(0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed) {
+        lensHub = LensHub(lensHubProxyContract);
+
+        // chainlinkVRF = ChainlinkVRF(0x803824A1528f9c1741374e056ff23E0f34299ec2);
+        COORDINATOR = VRFCoordinatorV2Interface(
+            0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
+        );
+        s_subscriptionId = subscriptionId;
+
+        // console.log(address(this));
     }
 
     function supportsInterface(bytes4 interfaceID) public pure override returns (bool) {
@@ -72,8 +103,6 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         if(lensHub.ownerOf(senderProfileId) != params.transactionExecutor) {
             revert("The transactionExecutor doesn't own the profileId of the sender ");
         }
-
-        address winner;
         
         address publicationOwner = lensHub.ownerOf(params.publicationActedProfileId);
         if(params.transactionExecutor != publicationOwner) {
@@ -84,28 +113,81 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
             
             _giveawayInfos[params.publicationActedId].usersRegistered.push(params.transactionExecutor);
         } else {
-            chainlinkVRF.acceptOwnership();
-            uint256 requestId = chainlinkVRF.requestRandomWords();
-            console.log("requestId", requestId);
-            (bool fulfilled, uint256[] memory randomWords) = chainlinkVRF.getRequestStatus(requestId);
+            // chainlinkVRF.acceptOwnership();
+            // uint256 requestId = chainlinkVRF.requestRandomWords();
+            // console.log("requestId", requestId);
+            // (bool fulfilled, uint256[] memory randomWords) = chainlinkVRF.getRequestStatus(requestId);
+            // if(!fulfilled || randomWords.length == 0) {
+            //     revert("Random words could not be fetched");
+            // }
+            // uint256 randomNumber = 286532976532;
 
-            if(!fulfilled || randomWords.length == 0) {
-                revert("Random words could not be fetched");
-            }
-
-            uint256 randomNumber = 286532976532;
-            winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber % _giveawayInfos[params.publicationActedId].usersRegistered.length];
-
-            IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
-            token.safeTransferFrom(
-                params.actorProfileOwner,
-                winner,
-                _giveawayInfos[params.publicationActedId].rewardAmount
-            );
-
-            _giveawayInfos[params.publicationActedId].giveawayClosed = true;
+            uint256 requestId = requestRandomWords();
+            _publicationsParams[requestId] = params;
         }
         
-        return abi.encode(winner, _giveawayInfos[params.publicationActedId].usersRegistered.length);
+        return abi.encode(_giveawayInfos[params.publicationActedId].usersRegistered.length);
+    }
+
+    function requestRandomWords()
+        private
+        returns (uint256 requestId)
+    {
+        // Will revert if subscription is not set and funded.
+        requestId = COORDINATOR.requestRandomWords(
+            keyHash,
+            s_subscriptionId,
+            requestConfirmations,
+            callbackGasLimit,
+            numWords
+        );
+        s_requests[requestId] = RequestStatus({
+            randomWords: new uint256[](0),
+            exists: true,
+            fulfilled: false
+        });
+        requestIds.push(requestId);
+        lastRequestId = requestId;
+        emit RequestSent(requestId, numWords);
+        return requestId;
+    }
+
+    function fulfillRandomWords(
+        uint256 _requestId,
+        uint256[] memory _randomWords
+    ) internal override {
+        require(s_requests[_requestId].exists, "request not found");
+        s_requests[_requestId].fulfilled = true;
+        s_requests[_requestId].randomWords = _randomWords;
+        randomWord = _randomWords[0];
+
+        Types.ProcessActionParams memory params = _publicationsParams[_requestId];
+        uint256 randomNumber = randomWord % _giveawayInfos[params.publicationActedId].usersRegistered.length;
+        address winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber];
+
+        // console.log("_requestId", _requestId);
+        // console.log("winner", winner);
+        // console.log("randomNumber", randomNumber);
+        // console.log("randomWord", randomWord);
+        // console.log("usersRegistered", _giveawayInfos[params.publicationActedId].usersRegistered.length);
+
+        IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
+        token.safeTransferFrom(
+            params.actorProfileOwner,
+            winner,
+            _giveawayInfos[params.publicationActedId].rewardAmount
+        );
+
+        _giveawayInfos[params.publicationActedId].giveawayClosed = true;
+
+        emit RequestFulfilled(_requestId, _randomWords);
+    }
+
+    function getRequestStatus(
+        uint256 _requestId
+    ) public view returns (bool fulfilled, uint256[] memory randomWords) {
+        require(s_requests[_requestId].exists, "request not found");
+        RequestStatus memory request = s_requests[_requestId];
+        return (request.fulfilled, request.randomWords);
     }
 }
