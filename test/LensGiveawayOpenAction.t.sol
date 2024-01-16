@@ -7,6 +7,7 @@ import "forge-std/console.sol";
 import {LensGiveawayOpenAction} from "../src/LensGiveawayOpenAction.sol";
 import {Types} from 'lens/Types.sol';
 import {Types as GiveawayTypes} from '@lens-giveaway/Types.sol';
+import {VRFCoordinatorV2Mock} from '@chainlink/vrf/mock/VRFCoordinatorV2Mock.sol';
 
 abstract contract USDCe {
     function approve(address spender, uint256 value) public virtual returns (bool);
@@ -37,6 +38,7 @@ contract LensGiveawayOpenActionTest is Test {
     uint256 authorProfileId = 1093;
 
     function setUp() public {
+        new VRFCoordinatorV2Mock();
         lensGiveawayOpenAction = new LensGiveawayOpenAction(lensHubProxy, participant, 6940);
         usdce = USDCe(usdceAddress);
     }
