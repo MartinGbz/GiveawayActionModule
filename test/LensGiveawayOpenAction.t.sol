@@ -6,7 +6,7 @@ import "forge-std/console.sol";
 
 import {LensGiveawayOpenAction} from "../src/LensGiveawayOpenAction.sol";
 import {Types} from 'lens/Types.sol';
-import {Types as GiveawayTypes} from 'lens-giveaway/Types.sol';
+import {Types as GiveawayTypes} from '@lens-giveaway/Types.sol';
 
 abstract contract USDCe {
     function approve(address spender, uint256 value) public virtual returns (bool);

@@ -7,7 +7,7 @@ import {Types} from 'lens/Types.sol';
 import {IPublicationActionModule} from 'lens/IPublicationActionModule.sol';
 import {LensModuleMetadata} from 'lens/LensModuleMetadata.sol';
 
-import {Types as GiveawayTypes} from 'lens-giveaway/Types.sol';
+import {Types as GiveawayTypes} from '@lens-giveaway/Types.sol';
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -22,14 +22,6 @@ abstract contract LensHub {
     function isFollowing(uint256 followerProfileId, uint256 followedProfileId) public virtual view returns (bool);
 }
 
-// abstract contract ChainlinkVRF {
-//     uint256 public lastRequestId;
-//     function requestRandomWords() external virtual returns (uint256 requestId);
-//     function fulfillRandomWords(uint256 _requestId, uint256[] memory _randomWords) internal virtual;
-//     function getRequestStatus(uint256 _requestId) external virtual view returns (bool fulfilled, uint256[] memory randomWords);
-//     function acceptOwnership() external virtual;
-// }
-
 contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, LensModuleMetadata, VRFConsumerBaseV2 {
     mapping(uint256 publicationId => GiveawayTypes.GiveawayInfos) internal _giveawayInfos;
     mapping(uint256 requestId => Types.ProcessActionParams) internal _publicationsParams;
@@ -39,7 +31,6 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
     using SafeERC20 for IERC20;
 
     /* ---------- ChainlinkVRF ---------- */
-    // ChainlinkVRF internal chainlinkVRF;
     event RequestSent(uint256 requestId, uint32 numWords);
     event RequestFulfilled(uint256 requestId, uint256[] randomWords);
     struct RequestStatus {
@@ -63,7 +54,6 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
     constructor(address lensHubProxyContract, address moduleOwner, uint64 subscriptionId) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) VRFConsumerBaseV2(0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed) {
         lensHub = LensHub(lensHubProxyContract);
 
-        // chainlinkVRF = ChainlinkVRF(0x803824A1528f9c1741374e056ff23E0f34299ec2);
         COORDINATOR = VRFCoordinatorV2Interface(
             0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
         );
@@ -113,15 +103,6 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
             
             _giveawayInfos[params.publicationActedId].usersRegistered.push(params.transactionExecutor);
         } else {
-            // chainlinkVRF.acceptOwnership();
-            // uint256 requestId = chainlinkVRF.requestRandomWords();
-            // console.log("requestId", requestId);
-            // (bool fulfilled, uint256[] memory randomWords) = chainlinkVRF.getRequestStatus(requestId);
-            // if(!fulfilled || randomWords.length == 0) {
-            //     revert("Random words could not be fetched");
-            // }
-            // uint256 randomNumber = 286532976532;
-
             uint256 requestId = requestRandomWords();
             _publicationsParams[requestId] = params;
         }
@@ -129,6 +110,7 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         return abi.encode(_giveawayInfos[params.publicationActedId].usersRegistered.length);
     }
 
+    /* ---------- ChainlinkVRF ---------- */
     function requestRandomWords()
         private
         returns (uint256 requestId)
@@ -190,4 +172,5 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         RequestStatus memory request = s_requests[_requestId];
         return (request.fulfilled, request.randomWords);
     }
+    /* ---------------------------------- */
 }
