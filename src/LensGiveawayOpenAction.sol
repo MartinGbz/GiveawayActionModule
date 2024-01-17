@@ -15,8 +15,6 @@ import "@chainlink/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/shared/access/ConfirmedOwner.sol";
 
-import "forge-std/console.sol";
-
 abstract contract LensHub {
     function ownerOf(uint256 profileId) public virtual view returns (address);
     function isFollowing(uint256 followerProfileId, uint256 followedProfileId) public virtual view returns (bool);
@@ -38,21 +36,18 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         bool exists;
         uint256[] randomWords;
     }
-    mapping(uint256 => RequestStatus)
-        public s_requests;
+    mapping(uint256 => RequestStatus) public s_requests;
     VRFCoordinatorV2Interface COORDINATOR;
     uint64 s_subscriptionId;
     uint256[] public requestIds;
     uint256 public lastRequestId;
     bytes32 keyHash = 0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f;
-    // need to put 200000 gas limit instead of 100000 because otherwise the fulfillRandomWords function (callBack function) wouldn't have enough gas to execute the transferFrom function
+    // need to put 200000 gas limit because otherwise fulfillRandomWords() (callBack function) wouldn't have enough gas to run completely
     uint32 callbackGasLimit = 200000;
     uint16 requestConfirmations = 3;
-    uint32 numWords = 2;
-    uint public randomWord;
+    uint32 numWords = 1;
     /* ---------------------------------- */
     
-    // vrfCoordinator mumbai: 0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
     constructor(address lensHubProxyContract, address moduleOwner, uint64 subscriptionId, address vrfCoordinator) HubRestricted(lensHubProxyContract) LensModuleMetadata(moduleOwner) VRFConsumerBaseV2(vrfCoordinator) {
         lensHub = LensHub(lensHubProxyContract);
 
@@ -110,6 +105,23 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         return abi.encode(requestId);
     }
 
+    function rewardWinner(uint256 _requestId, uint256 randomNumber) private {
+        Types.ProcessActionParams memory params = _publicationsParams[_requestId];
+        uint256 randomNumberShaped = randomNumber % _giveawayInfos[params.publicationActedId].usersRegistered.length;
+        address winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumberShaped];
+
+        IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
+        
+        token.safeTransferFrom(
+            params.actorProfileOwner,
+            winner,
+            _giveawayInfos[params.publicationActedId].rewardAmount
+        );
+
+        _giveawayInfos[params.publicationActedId].giveawayClosed = true;
+    }
+
+
     /* ---------- ChainlinkVRF ---------- */
     function requestRandomWords()
         private
@@ -141,21 +153,8 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         require(s_requests[_requestId].exists, "request not found");
         s_requests[_requestId].fulfilled = true;
         s_requests[_requestId].randomWords = _randomWords;
-        randomWord = _randomWords[0];
 
-        Types.ProcessActionParams memory params = _publicationsParams[_requestId];
-        uint256 randomNumber = randomWord % _giveawayInfos[params.publicationActedId].usersRegistered.length;
-        address winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber];
-
-        IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
-        
-        token.safeTransferFrom(
-            params.actorProfileOwner,
-            winner,
-            _giveawayInfos[params.publicationActedId].rewardAmount
-        );
-
-        _giveawayInfos[params.publicationActedId].giveawayClosed = true;
+        rewardWinner(_requestId, _randomWords[0]);
 
         emit RequestFulfilled(_requestId, _randomWords);
     }

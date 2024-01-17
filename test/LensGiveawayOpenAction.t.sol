@@ -11,11 +11,6 @@ import {VRFCoordinatorV2Mock} from '@chainlink/vrf/mocks/VRFCoordinatorV2Mock.so
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {FakeUSDCe} from "src/fakeUsdce.sol";
 
-// abstract contract USDCe {
-//     function approve(address spender, uint256 value) public virtual returns (bool);
-//     function balanceOf(address account) public view virtual returns (uint256);
-// }
-
 contract LensGiveawayOpenActionTest is Test {
     LensGiveawayOpenAction public lensGiveawayOpenAction;
     VRFCoordinatorV2Mock public vrfCoordinatorV2Mock;
@@ -38,7 +33,6 @@ contract LensGiveawayOpenActionTest is Test {
 
     uint256 pubId = 1;
 
-    // uint256 participantProfileIdMumbai = 1041;
     uint256 participantProfileId = 1041;
     uint256 authorProfileId = 1093;
 
@@ -51,13 +45,8 @@ contract LensGiveawayOpenActionTest is Test {
 
         vrfCoordinatorV2Mock.addConsumer(subId, address(lensGiveawayOpenAction));
         
-        // console.log("vrfCoordinatorV2Mock", address(vrfCoordinatorV2Mock));
-        // console.log("subId", subId);
-        
         usdce = new FakeUSDCe();
         usdceAddress = address(usdce);
-
-        // console.log("lensGiveawayOpenAction", address(lensGiveawayOpenAction));
     }
 
     function testInit() public {
@@ -88,10 +77,9 @@ contract LensGiveawayOpenActionTest is Test {
         assertEq(usdce.balanceOf(participant), 0);
     }
 
-    // event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
 
     function testFullFlow() public {
-        console.log("testFullFlow");
         vm.startPrank(lensHubProxy); // OnlyHub
         lensGiveawayOpenAction.initializePublicationAction(authorProfileId, pubId, publicationAuthor,  abi.encode(usdceAddress, 1));
 
@@ -106,7 +94,6 @@ contract LensGiveawayOpenActionTest is Test {
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).usersRegistered.length, 1);
 
         assertEq(usdce.balanceOf(participant), 0);
-        console.log("usdce", address(usdce));
 
         // --- Approve USDCe ---
         vm.stopPrank();
@@ -120,12 +107,11 @@ contract LensGiveawayOpenActionTest is Test {
         bytes memory requestIdBytes = lensGiveawayOpenAction.processPublicationAction(paramsDraw);
         uint256 requestId = abi.decode(requestIdBytes, (uint256));
 
-        // vm.expectEmit(false, false, false, false);
-        // // emit RequestFulfilled(0, [281620ef8bbcea99eddfc8cbb8c420c910c777d19254fad356ead0ec3b3560e1]);
-        // uint256[] memory randomWords;
-        // emit RequestFulfilled(0, randomWords);
+        vm.expectEmit(false, false, false, false);
+        uint256[] memory randomWords;
+        emit RequestFulfilled(0, randomWords);
 
-        // generate random numbers and fulfill the request to the open action contract
+        // generate random number and fulfill the request of the open action contract
         vrfCoordinatorV2Mock.fulfillRandomWords(requestId, address(lensGiveawayOpenAction));
 
         assertEq(usdce.balanceOf(participant), 1);
