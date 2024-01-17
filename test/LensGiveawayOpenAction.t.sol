@@ -112,25 +112,21 @@ contract LensGiveawayOpenActionTest is Test {
         vm.stopPrank();
         vm.startPrank(publicationAuthor);
         usdce.approve(address(lensGiveawayOpenAction), 1);
-        // console.log(usdce.balanceOf(publicationAuthor));
-        // uint256 allowance = usdce.allowance(publicationAuthor, address(lensGiveawayOpenAction));
-        // console.log("allowance", allowance);
-        // console.log("address(lensGiveawayOpenAction)", address(lensGiveawayOpenAction));
         vm.stopPrank();
         vm.startPrank(lensHubProxy);
         // --------------------
-
-        // vm.expectEmit(false, false, false, false);
-        // emit RequestFulfilled(0, [281620ef8bbcea99eddfc8cbb8c420c910c777d19254fad356ead0ec3b3560e1]);
 
         Types.ProcessActionParams memory paramsDraw = Types.ProcessActionParams(authorProfileId, pubId, authorProfileId, publicationAuthor, publicationAuthor, new uint256[](0), new uint256[](0), new Types.PublicationType[](0), abi.encode(authorProfileId));
         bytes memory requestIdBytes = lensGiveawayOpenAction.processPublicationAction(paramsDraw);
         uint256 requestId = abi.decode(requestIdBytes, (uint256));
 
+        // vm.expectEmit(false, false, false, false);
+        // // emit RequestFulfilled(0, [281620ef8bbcea99eddfc8cbb8c420c910c777d19254fad356ead0ec3b3560e1]);
+        // uint256[] memory randomWords;
+        // emit RequestFulfilled(0, randomWords);
+
         // generate random numbers and fulfill the request to the open action contract
         vrfCoordinatorV2Mock.fulfillRandomWords(requestId, address(lensGiveawayOpenAction));
-
-        // console.log("usdce.balanceOf(participant)", usdce.balanceOf(participant));
 
         assertEq(usdce.balanceOf(participant), 1);
     }
