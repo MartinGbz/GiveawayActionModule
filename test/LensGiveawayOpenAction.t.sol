@@ -106,16 +106,16 @@ contract LensGiveawayOpenActionTest is Test {
         assertEq(lensGiveawayOpenAction.giveawayInfos(pubId).usersRegistered.length, 1);
 
         assertEq(usdce.balanceOf(participant), 0);
+        console.log("usdce", address(usdce));
 
         // --- Approve USDCe ---
         vm.stopPrank();
         vm.startPrank(publicationAuthor);
-        // console.log("publicationAuthor", address(publicationAuthor));
         usdce.approve(address(lensGiveawayOpenAction), 1);
-        console.log(usdce.balanceOf(publicationAuthor));
-        uint256 allowance = usdce.totalSupply();
-        // uint256 allowance = usdce.allowance(publicationAuthor, address(usdce));
+        // console.log(usdce.balanceOf(publicationAuthor));
+        // uint256 allowance = usdce.allowance(publicationAuthor, address(lensGiveawayOpenAction));
         // console.log("allowance", allowance);
+        // console.log("address(lensGiveawayOpenAction)", address(lensGiveawayOpenAction));
         vm.stopPrank();
         vm.startPrank(lensHubProxy);
         // --------------------

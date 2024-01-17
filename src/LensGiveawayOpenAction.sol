@@ -45,7 +45,9 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
     uint256[] public requestIds;
     uint256 public lastRequestId;
     bytes32 keyHash = 0x4b09e658ed251bcafeebbc69400383d49f344ace09b9576fe248bb02c003fe9f;
-    uint32 callbackGasLimit = 100000;
+    // need to put 200000 gas limit instead of 100000 because otherwise the fulfillRandomWords function (callBack function) wouldn't have enough gas to execute the transferFrom function
+    uint32 callbackGasLimit = 200000;
+    // uint32 callbackGasLimit = 100000;
     uint16 requestConfirmations = 3;
     uint32 numWords = 2;
     uint public randomWord;
@@ -150,23 +152,30 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         uint256 randomNumber = randomWord % _giveawayInfos[params.publicationActedId].usersRegistered.length;
         address winner = _giveawayInfos[params.publicationActedId].usersRegistered[randomNumber];
 
-        console.log("_requestId", _requestId);
-        console.log("winner", winner);
-        console.log("randomNumber", randomNumber);
+        // console.log("_requestId", _requestId);
+        // console.log("winner", winner);
+        // console.log("randomNumber", randomNumber);
         console.log("randomWord", randomWord);
-        console.log("usersRegistered", _giveawayInfos[params.publicationActedId].usersRegistered.length);
+        // console.log("usersRegistered", _giveawayInfos[params.publicationActedId].usersRegistered.length);
+
+        console.log("currency", _giveawayInfos[params.publicationActedId].rewardCurrency);
 
         IERC20 token = IERC20(_giveawayInfos[params.publicationActedId].rewardCurrency);
         
-        console.log("1");
-        console.log("rewardCurrency", _giveawayInfos[params.publicationActedId].rewardCurrency);
-        console.log("rewardAmount", _giveawayInfos[params.publicationActedId].rewardAmount);
-        console.log("this", address(this));
-        console.log("gang");
+        // console.log("1");
+        // console.log("rewardCurrency", _giveawayInfos[params.publicationActedId].rewardCurrency);
+        // console.log("rewardAmount", _giveawayInfos[params.publicationActedId].rewardAmount);
+        // console.log("gang1");
+        // console.log("this", address(this));
+        // console.log("gang");
         console.log("token", address(token));
 
-        console.log("balance", token.balanceOf(winner));
+        // console.log("balance", token.balanceOf(winner));
         console.log("allowance", token.allowance(params.actorProfileOwner, address(this)));
+
+        console.log("params.actorProfileOwne", params.actorProfileOwner);
+        console.log("winner", winner);
+        console.log("rewardAmount", _giveawayInfos[params.publicationActedId].rewardAmount);
         
         token.safeTransferFrom(
             params.actorProfileOwner,
