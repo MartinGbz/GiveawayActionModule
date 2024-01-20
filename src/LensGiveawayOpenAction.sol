@@ -28,6 +28,8 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
 
     using SafeERC20 for IERC20;
 
+    event WinnerDrawn(uint256 pubId, address winner);
+
     /* ---------- ChainlinkVRF ---------- */
     event RequestSent(uint256 requestId, uint32 numWords);
     event RequestFulfilled(uint256 requestId, uint256[] randomWords);
@@ -119,6 +121,8 @@ contract LensGiveawayOpenAction is HubRestricted, IPublicationActionModule, Lens
         );
 
         _giveawayInfos[params.publicationActedId].giveawayClosed = true;
+
+        emit WinnerDrawn(params.publicationActedId, winner);
     }
 
 
