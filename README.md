@@ -18,6 +18,10 @@ The GiveawayActionModule is a Lens Protocol Open Action Module that allows Lens 
   - Choose randomly one of the registrants (using [chainlinkVRF](https://docs.chain.link/vrf))
   - Send the tokens to the winner
 
+# Schema
+
+<img src="./medias/schema.png" alt="Lens Giveaway Schema" />
+
 # Tests
 
 Tests must be run on mumbai testnet:
